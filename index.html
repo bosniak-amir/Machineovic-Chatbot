@@ -703,6 +703,25 @@
 
         // Auto-scroll on load
         scrollToBottom();
+        // Allow customization via URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+
+// Customize bot name
+if (urlParams.get('name')) {
+  CONFIG.botName = urlParams.get('name');
+  document.querySelector('.chat-bot-name').textContent = CONFIG.botName;
+}
+
+// Customize webhook
+if (urlParams.get('webhook')) {
+  CONFIG.webhookUrl = urlParams.get('webhook');
+}
+
+// Customize colors
+if (urlParams.get('color')) {
+  const color = '#' + urlParams.get('color');
+  document.documentElement.style.setProperty('--primary-color', color);
+}
     </script>
 
 </body>
