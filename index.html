@@ -12,17 +12,17 @@
         }
 
         body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-}
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
 
-        /* Chat Launcher Button - Gradient */
+        /* Chat Launcher Button */
         .chat-launcher {
             position: fixed;
-            bottom: 24px;
+            bottom: 20px;
             right: 24px;
             background: linear-gradient(135deg, #002F6C 0%, #FFCD00 100%);
             color: white;
@@ -52,7 +52,7 @@
         /* Chat Widget Container */
         .chat-widget {
             position: fixed;
-            bottom: 24px;
+            bottom: 20px;
             right: 24px;
             width: 400px;
             max-width: calc(100vw - 48px);
@@ -247,11 +247,11 @@
 
         /* Messages Area */
         .chat-messages {
-    flex: 1;
-    padding: 20px;
-    overflow-y: auto;
-    background: white;
-}
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+        }
 
         .chat-message {
             margin-bottom: 16px;
@@ -564,7 +564,7 @@
     </div>
 
     <script>
-        // Configuration - CUSTOMIZE THIS!
+        // Configuration - UPDATE YOUR WEBHOOK URL HERE!
         const CONFIG = {
             webhookUrl: 'https://n8n.srv1186643.hstgr.cloud/webhook/046374d4-0a82-4235-aa5d-844224df3151/chat',
             botName: '24/7 Customer Support',
@@ -594,37 +594,37 @@
         let isDarkMode = false;
 
         // Theme Toggle
-        themeToggle.addEventListener('click', () => {
+        themeToggle.addEventListener('click', function() {
             isDarkMode = !isDarkMode;
             chatWidget.classList.toggle('dark-mode');
             themeText.textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
         });
 
         // Open/Close Chat
-        chatLauncher.addEventListener('click', () => {
+        chatLauncher.addEventListener('click', function() {
             chatWidget.classList.add('open');
             chatLauncher.classList.add('hidden');
             chatInput.focus();
         });
 
-        chatClose.addEventListener('click', () => {
+        chatClose.addEventListener('click', function() {
             chatWidget.classList.remove('open');
             chatLauncher.classList.remove('hidden');
         });
 
         // Send Message
         chatSend.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
+        chatInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') sendMessage();
         });
 
         // Shortcut Buttons
-        shortcuts.addEventListener('click', (e) => {
+        shortcuts.addEventListener('click', function(e) {
             if (e.target.classList.contains('shortcut-btn')) {
                 const message = e.target.getAttribute('data-message');
                 chatInput.value = message;
                 sendMessage();
-                shortcuts.remove(); // Remove shortcuts after first use
+                shortcuts.remove();
             }
         });
 
@@ -649,28 +649,10 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-    body: {
-        sessionId: sessionId,
-        message: message,
-        timestamp: new Date().toISOString()
-    }
-})
-```
-
-**OR better yet**, let's simplify n8n instead:
-
----
-
-## ✅ Easier Fix: Update n8n to Match Current Format
-
-In your **Website ChatBot** node, change the Prompt to just:
-```
-{{ $json.message }}
-```
-
-Instead of:
-```
-{{ $json.body.message }}
+                        sessionId: sessionId,
+                        message: message,
+                        timestamp: new Date().toISOString()
+                    })
                 });
 
                 const data = await response.json();
@@ -678,29 +660,22 @@ Instead of:
                 // Hide typing indicator
                 typingIndicator.classList.remove('active');
 
-                // Add bot response
-                // Add bot response - handle different response formats
-let botMessage = 'Sorry, I could not process your request.';
-
-if (data.response) {
-    botMessage = data.response;
-} else if (data.message) {
-    botMessage = data.message;
-} else if (data.output) {
-    botMessage = data.output;
-} else if (data.text) {
-    botMessage = data.text;
-} else if (typeof data === 'string') {
-    botMessage = data;
-} else {
-    // If it's an object, try to get the first text value
-    const firstValue = Object.values(data)[0];
-    if (typeof firstValue === 'string') {
-        botMessage = firstValue;
-    }
-}
-
-addMessage(botMessage, 'bot');
+                // Add bot response - handle different formats
+                let botMessage = 'Sorry, I could not process your request.';
+                
+                if (data.response) {
+                    botMessage = data.response;
+                } else if (data.message) {
+                    botMessage = data.message;
+                } else if (data.output) {
+                    botMessage = data.output;
+                } else if (data.text) {
+                    botMessage = data.text;
+                } else if (typeof data === 'string') {
+                    botMessage = data;
+                }
+                
+                addMessage(botMessage, 'bot');
 
             } catch (error) {
                 console.error('Error:', error);
@@ -714,20 +689,19 @@ addMessage(botMessage, 'bot');
 
         function addMessage(text, sender) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${sender}`;
+            messageDiv.className = 'chat-message ' + sender;
 
             const avatar = document.createElement('div');
-            avatar.className = `message-avatar ${sender}`;
+            avatar.className = 'message-avatar ' + sender;
             avatar.textContent = sender === 'bot' ? '🤖' : '👤';
 
             const bubble = document.createElement('div');
-            bubble.className = `message-bubble ${sender}`;
+            bubble.className = 'message-bubble ' + sender;
             bubble.textContent = text;
 
             messageDiv.appendChild(avatar);
             messageDiv.appendChild(bubble);
 
-            // Insert before typing indicator
             const messagesContainer = document.getElementById('chatMessages');
             messagesContainer.insertBefore(messageDiv, typingIndicator);
             scrollToBottom();
@@ -743,25 +717,8 @@ addMessage(botMessage, 'bot');
 
         // Auto-scroll on load
         scrollToBottom();
-        // Allow customization via URL parameters
-const urlParams = new URLSearchParams(window.location.search);
-
-// Customize bot name
-if (urlParams.get('name')) {
-  CONFIG.botName = urlParams.get('name');
-  document.querySelector('.chat-bot-name').textContent = CONFIG.botName;
-}
-
-// Customize webhook
-if (urlParams.get('webhook')) {
-  CONFIG.webhookUrl = urlParams.get('webhook');
-}
-
-// Customize colors
-if (urlParams.get('color')) {
-  const color = '#' + urlParams.get('color');
-  document.documentElement.style.setProperty('--primary-color', color);
-}
+        
+        console.log('✅ Machineovic Chatbot loaded successfully');
     </script>
 
 </body>
