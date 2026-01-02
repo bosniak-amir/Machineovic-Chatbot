@@ -3,7 +3,7 @@
   chatContainer.id = 'machineovic-chat-container';
   chatContainer.style.cssText = `
     position: fixed !important;
-    bottom: 0 !important;
+    bottom: 20px !important;
     right: 0 !important;
     width: 450px !important;
     height: 650px !important;
