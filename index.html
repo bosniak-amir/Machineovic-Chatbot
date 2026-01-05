@@ -524,19 +524,6 @@
 
         <!-- Messages -->
         <div class="chat-messages" id="chatMessages">
-            <div class="chat-message bot">
-                <div class="message-avatar bot">🤖</div>
-                <div class="message-bubble bot">
-                    Hi! How can I help?
-                    <div class="chat-shortcuts" id="shortcuts">
-                        <button class="shortcut-btn" data-message="Tell me about your products">Product Info</button>
-                        <button class="shortcut-btn" data-message="What are your pricing options?">Pricing</button>
-                        <button class="shortcut-btn" data-message="Can you find my order?">Track my order</button>
-                        <button class="shortcut-btn" data-message="Who can I contact for more information?">Contact</button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Typing Indicator -->
             <div class="typing-indicator" id="typingIndicator">
                 <div class="typing-dot"></div>
@@ -568,7 +555,6 @@
         const CONFIG = {
             webhookUrl: 'https://n8n.srv1186643.hstgr.cloud/webhook/046374d4-0a82-4235-aa5d-844224df3151/chat',
             botName: '24/7 Customer Support',
-            welcomeMessage: 'Hi! How can I help?',
             shortcuts: [
                 { text: 'Product Info', message: 'Tell me about your products' },
                 { text: 'Pricing', message: 'What are your pricing options?' },
@@ -585,13 +571,13 @@
         const chatInput = document.getElementById('chatInput');
         const chatSend = document.getElementById('chatSend');
         const typingIndicator = document.getElementById('typingIndicator');
-        const shortcuts = document.getElementById('shortcuts');
         const themeToggle = document.getElementById('themeToggle');
         const themeText = document.querySelector('.theme-text');
 
         // Session ID for tracking conversation
         let sessionId = generateSessionId();
         let isDarkMode = false;
+        let conversationStarted = false;
 
         // Theme Toggle
         themeToggle.addEventListener('click', function() {
@@ -605,6 +591,12 @@
             chatWidget.classList.add('open');
             chatLauncher.classList.add('hidden');
             chatInput.focus();
+            
+            // Start conversation when first opened
+            if (!conversationStarted) {
+                startConversation();
+                conversationStarted = true;
+            }
         });
 
         chatClose.addEventListener('click', function() {
@@ -618,15 +610,41 @@
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Shortcut Buttons
-        shortcuts.addEventListener('click', function(e) {
-            if (e.target.classList.contains('shortcut-btn')) {
-                const message = e.target.getAttribute('data-message');
-                chatInput.value = message;
-                sendMessage();
-                shortcuts.remove();
+        // Start conversation with welcome message
+        async function startConversation() {
+            typingIndicator.classList.add('active');
+            scrollToBottom();
+
+            try {
+                const response = await fetch(CONFIG.webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: "loadPreviousSession",
+                        sessionId: sessionId,
+                        metadata: { userId: "" }
+                    })
+                });
+
+                typingIndicator.classList.remove('active');
+
+                const data = await response.json();
+                console.log('Initial response:', data);
+
+                // Parse welcome message
+                const welcomeMessage = Array.isArray(data) ? data[0].output : data.output;
+                
+                // Add welcome message with shortcuts
+                addWelcomeMessage(welcomeMessage);
+
+            } catch (error) {
+                console.error('Error starting conversation:', error);
+                typingIndicator.classList.remove('active');
+                addMessage('Hi! 👋 How can I help you today?', 'bot');
             }
-        });
+        }
 
         async function sendMessage() {
             const message = chatInput.value.trim();
@@ -642,64 +660,27 @@
             scrollToBottom();
 
             try {
-                // Send to webhook
+                // FIXED: Use correct n8n format
                 const response = await fetch(CONFIG.webhookUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        action: "sendMessage",
                         sessionId: sessionId,
-                        message: message,
-                        timestamp: new Date().toISOString()
+                        chatInput: message,
+                        metadata: { userId: "" }
                     })
                 });
 
-                // Hide typing indicator
                 typingIndicator.classList.remove('active');
 
-                // IMPROVED: Better response handling
-                let botMessage = 'Sorry, I could not process your request.';
+                const data = await response.json();
+                console.log('Webhook response:', data);
                 
-                // First, try to parse as JSON
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
-                    
-                    // Log the full response for debugging
-                    console.log('Webhook response:', data);
-                    
-                    // Try different possible response formats
-                    if (typeof data === 'string') {
-                        botMessage = data;
-                    } else if (data.response) {
-                        botMessage = data.response;
-                    } else if (data.message) {
-                        botMessage = data.message;
-                    } else if (data.output) {
-                        botMessage = data.output;
-                    } else if (data.text) {
-                        botMessage = data.text;
-                    } else if (data.result) {
-                        botMessage = data.result;
-                    } else if (data.reply) {
-                        botMessage = data.reply;
-                    } else if (data.answer) {
-                        botMessage = data.answer;
-                    } else {
-                        // If none of the above, stringify the whole object for debugging
-                        console.warn('Unexpected response format:', data);
-                        botMessage = 'Received unexpected response format. Check console for details.';
-                    }
-                } else {
-                    // If not JSON, try reading as text
-                    const textResponse = await response.text();
-                    console.log('Text response:', textResponse);
-                    
-                    if (textResponse) {
-                        botMessage = textResponse;
-                    }
-                }
+                // FIXED: Parse response correctly
+                const botMessage = Array.isArray(data) ? data[0].output : data.output;
                 
                 addMessage(botMessage, 'bot');
 
@@ -711,6 +692,44 @@
 
             chatSend.disabled = false;
             chatInput.focus();
+        }
+
+        function addWelcomeMessage(text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message bot';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar bot';
+            avatar.textContent = '🤖';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble bot';
+            bubble.textContent = text;
+
+            // Add shortcuts
+            const shortcutsDiv = document.createElement('div');
+            shortcutsDiv.className = 'chat-shortcuts';
+            shortcutsDiv.id = 'shortcuts';
+            
+            CONFIG.shortcuts.forEach(shortcut => {
+                const btn = document.createElement('button');
+                btn.className = 'shortcut-btn';
+                btn.textContent = shortcut.text;
+                btn.setAttribute('data-message', shortcut.message);
+                btn.addEventListener('click', function() {
+                    chatInput.value = this.getAttribute('data-message');
+                    sendMessage();
+                    shortcutsDiv.remove();
+                });
+                shortcutsDiv.appendChild(btn);
+            });
+
+            bubble.appendChild(shortcutsDiv);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(bubble);
+
+            chatMessages.insertBefore(messageDiv, typingIndicator);
+            scrollToBottom();
         }
 
         function addMessage(text, sender) {
@@ -728,8 +747,7 @@
             messageDiv.appendChild(avatar);
             messageDiv.appendChild(bubble);
 
-            const messagesContainer = document.getElementById('chatMessages');
-            messagesContainer.insertBefore(messageDiv, typingIndicator);
+            chatMessages.insertBefore(messageDiv, typingIndicator);
             scrollToBottom();
         }
 
