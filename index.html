@@ -633,17 +633,54 @@
                 const data = await response.json();
                 console.log('Initial response:', data);
 
-                // Parse welcome message
-                const welcomeMessage = Array.isArray(data) ? data[0].output : data.output;
-                
-                // Add welcome message with shortcuts
-                addWelcomeMessage(welcomeMessage);
+                // Add welcome message with shortcuts embedded
+                addWelcomeMessageWithShortcuts();
 
             } catch (error) {
                 console.error('Error starting conversation:', error);
                 typingIndicator.classList.remove('active');
-                addMessage('Hi! 👋 How can I help you today?', 'bot');
+                addWelcomeMessageWithShortcuts();
             }
+        }
+
+        function addWelcomeMessageWithShortcuts() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message bot';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar bot';
+            avatar.textContent = '🤖';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble bot';
+            
+            // Add welcome text
+            const welcomeText = document.createElement('div');
+            welcomeText.innerHTML = 'Hi! 👋 How can I help you today?<br><br>Send us a chat or use one of the shortcuts below!';
+            bubble.appendChild(welcomeText);
+
+            // Add shortcuts
+            const shortcutsDiv = document.createElement('div');
+            shortcutsDiv.className = 'chat-shortcuts';
+            
+            CONFIG.shortcuts.forEach(shortcut => {
+                const btn = document.createElement('button');
+                btn.className = 'shortcut-btn';
+                btn.textContent = shortcut.text;
+                btn.setAttribute('data-message', shortcut.message);
+                btn.addEventListener('click', function() {
+                    chatInput.value = this.getAttribute('data-message');
+                    sendMessage();
+                });
+                shortcutsDiv.appendChild(btn);
+            });
+
+            bubble.appendChild(shortcutsDiv);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(bubble);
+
+            chatMessages.insertBefore(messageDiv, typingIndicator);
+            scrollToBottom();
         }
 
         async function sendMessage() {
@@ -694,44 +731,6 @@
             chatInput.focus();
         }
 
-        function addWelcomeMessage(text) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'chat-message bot';
-
-            const avatar = document.createElement('div');
-            avatar.className = 'message-avatar bot';
-            avatar.textContent = '🤖';
-
-            const bubble = document.createElement('div');
-            bubble.className = 'message-bubble bot';
-            bubble.textContent = text;
-
-            // Add shortcuts
-            const shortcutsDiv = document.createElement('div');
-            shortcutsDiv.className = 'chat-shortcuts';
-            shortcutsDiv.id = 'shortcuts';
-            
-            CONFIG.shortcuts.forEach(shortcut => {
-                const btn = document.createElement('button');
-                btn.className = 'shortcut-btn';
-                btn.textContent = shortcut.text;
-                btn.setAttribute('data-message', shortcut.message);
-                btn.addEventListener('click', function() {
-                    chatInput.value = this.getAttribute('data-message');
-                    sendMessage();
-                    shortcutsDiv.remove();
-                });
-                shortcutsDiv.appendChild(btn);
-            });
-
-            bubble.appendChild(shortcutsDiv);
-            messageDiv.appendChild(avatar);
-            messageDiv.appendChild(bubble);
-
-            chatMessages.insertBefore(messageDiv, typingIndicator);
-            scrollToBottom();
-        }
-
         function addMessage(text, sender) {
             const messageDiv = document.createElement('div');
             messageDiv.className = 'chat-message ' + sender;
@@ -743,6 +742,26 @@
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble ' + sender;
             bubble.textContent = text;
+
+            // Add shortcuts to every bot message
+            if (sender === 'bot') {
+                const shortcutsDiv = document.createElement('div');
+                shortcutsDiv.className = 'chat-shortcuts';
+                
+                CONFIG.shortcuts.forEach(shortcut => {
+                    const btn = document.createElement('button');
+                    btn.className = 'shortcut-btn';
+                    btn.textContent = shortcut.text;
+                    btn.setAttribute('data-message', shortcut.message);
+                    btn.addEventListener('click', function() {
+                        chatInput.value = this.getAttribute('data-message');
+                        sendMessage();
+                    });
+                    shortcutsDiv.appendChild(btn);
+                });
+
+                bubble.appendChild(shortcutsDiv);
+            }
 
             messageDiv.appendChild(avatar);
             messageDiv.appendChild(bubble);
